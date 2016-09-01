@@ -1,0 +1,321 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Event Sourcing &amp; CQRS</title>
+
+		<link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/black.css" id="theme">
+        <!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+        <style>
+            .events {
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+            }
+
+            .events p {
+                font-size: 30px !important;
+            }
+        </style>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+                    <h2>Intro to Event Sourcing &amp; CQRS</h2>
+                    <br/>
+                    <h3>Rich Knight</h3>
+                </section>
+
+                <section>
+                    <section><h2>Modelling Data</h2></section>
+                    <section>
+                        <h2>Traditional</h2>
+                        <br/>
+                        <div>
+                            <div style='float: left'>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Order</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Id</td>
+                                            <td>Guid</td>
+                                        </tr>
+                                        <tr>
+                                            <td>CustomerId</td>
+                                            <td>Guid</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ShippingAddress</td>
+                                            <td>String</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Placed</td>
+                                            <td>Bool</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Shipped</td>
+                                            <td>Bool</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style='float: right'>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>OrderLine</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Id</td>
+                                            <td>Guid</td>
+                                        </tr>
+                                        <tr>
+                                            <td>OrderId</td>
+                                            <td>Guid</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ProductId</td>
+                                            <td>Int</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Quantity</td>
+                                            <td>Int</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+                    <section>
+                        <h2>Event Sourced</h2>
+                        <br/>
+                        <div class='events'>
+                            <p>Order Created</p>
+                            <p>&nbsp;&rarr;&nbsp;</p>
+                            <p>Shipping Address Set</p>
+                            <p>&nbsp;&rarr;&nbsp;</p>
+                            <p>3 Lines Added</p>
+                            <p>&nbsp;&rarr;&nbsp;</p>
+                            <p>Line Removed</p>
+                            <p>&nbsp;&rarr;&nbsp;</p>
+                            <p>Order Placed</p>
+                            <p>&nbsp;&rarr;&nbsp;</p>
+                            <p>Order Shipped</p>
+                        </div>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h2>Current State</h2>
+                    </section>
+                    <section>
+                        <h2>Object Oriented</h2>
+                        <pre>
+                            <code style="max-height: 500px;" data-trim >
+
+class Order {
+    
+    Guid Id;
+    Guid CustomerId;
+    String ShippingAddress;
+    Bool OrderPlaced;
+    Bool OrderShipped;
+    List&lt;OrderLine&gt; Lines;
+
+    public void Apply(OrderCreated e) {
+        Id = e.Id;
+        CustomerId = e.CustomerId;
+    }
+
+    public void Apply(LineAdded e) {
+        Lines.Add(new OrderLine(e.OrderLineId, /* ... */);
+    }
+
+    //etc
+}
+</code></pre>
+                    </section>
+                    <section>
+                        <h2>Functional</h2>
+                        <br/>
+                        <br/>
+                        <p>Given a function apply</p>
+                        <pre><code class="haskell" data-trim>apply :: State -&gt; Event -&gt; State</code></pre>
+                        <br/>
+                        <p>Current state is a left fold over previous events</p>
+                        <pre><code class="haskell">foldl apply EmptyState events</code></pre>
+                         <br/>
+                        <br/>
+                    </section>
+                    <section>
+                        <h2>Problem</h2>
+                        <p>Show me all orders placed in the last week</p>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h2>Command Query Separation (CQS)</h2>
+                        <br/>
+                        <p>Return something OR mutate state. Never both.</p>
+                        <pre><code data-trim class="csharp">
+    //Command
+void UpdateShippingAddress(string newAddress) {
+    if(_shipped)
+        throw new InvalidOperationException();
+
+    _shippingAddress = newAddress;
+}
+
+//Query - No mutation allowed!
+int GetNumberOfLines() {
+    return _lines.count();
+}
+                        </code></pre>
+                    </section>
+
+                    <section>
+                        <h1>CQRS</h1>
+                        <p>Command Query Responsibility Segregation</p>
+                        <br/>
+                        <ul>
+                            <li>One data model to service queries</li>
+                            <li>Another model to handle our business logic</li>
+                            <li>Very often these are completely different</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <img alt='Diagram of an ES/CQRS application' class='stretch' src='img/diagram.png'/>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h2>Technical Advantages</h2>
+                        <br/>
+                        <ul>
+                            <li>Performance</li>
+                            <li>Scaling</li>
+                            <li>Backups</li>
+                            <li>Time travel</li>
+                            <li>Testability</li>
+                            <li>Reduces accidental complexity</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <pre><code data-trim class="csharp">              
+Given(
+  new OrderCreated(id, ...),
+  new ShippingAddressChanged(id, "123 Something Road, Somewhere")
+)
+.When(
+  new AddLineToOrder(id, ...)
+)
+.Expect(
+  new OrderLineAdded(id, ...)
+);
+                       </code></pre>
+                                               <pre><code data-trim class="csharp">              
+Given(
+  new OrderCreated(id, ...),
+  new OrderDeleted(id)
+)
+.When(
+  new AddLineToOrder(id, ...)
+)
+.Expect&lt;InvalidOperationException&gt;();
+                       </code></pre>
+                   </section>
+                </section>
+                <section>
+                    <section>
+                        <h2>Business Advantages</h2>
+                        <br/>
+                        <ul>
+                            <li>Talking the same language</li>
+                            <li>Flexibility</li>
+                            <li>Auditing</li>
+                        </ul>
+                    </section>
+                </section>
+                <section>
+                    <h2>Resources</h2>
+                    <ul>
+                        <li><a href="https://twitter.com/gregyoung">@gregyoung</a><a href="http://goodenoughsoftware.net"> (goodenoughsoftware.net)</a></li>
+                        <li><a href="https://groups.google.com/forum/#!forum/dddcqrs">DDD/CQRS Google Group</a></li>
+                        <li><a href="https://geteventstore.com">Event Store (geteventstore.com)</a></li>
+                        <br/>
+                        <li><a href="https://twitter.com/rcknight">@rcknight</a></li>
+                        <li><a href="mailto:rich@rich-knight.com">rich@rich-knight.com</a></li>
+                        <li><a href="https://github.com/rcknight/es-cqrs-slides">github.com/rcknight/es-cqrs-slides</a></li>
+                    </ul>                    
+                </section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+        <script>
+			// More info https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				history: true,
+
+				// More info https://github.com/hakimel/reveal.js#dependencies
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				],
+                keyboard: {
+                    84: function() { 
+                        if(!window.prevState)
+                            window.prevState = Reveal.getState();
+
+                        Reveal.slide(1,1); 
+                    }, // third slide when t pressed
+                    69: function() {
+                        if(!window.prevState)
+                            window.prevState = Reveal.getState();
+
+                        Reveal.slide(1,2);
+                    }, // fourth slide when e pressed
+                    68: function() {
+                        if(!window.prevState)
+                            window.prevState = Reveal.getState();
+
+                        Reveal.slide(3,2);
+                    }, // diagram slide when d pressed
+                    82: function() { 
+                        if(window.prevState){ 
+                            Reveal.setState(window.prevState);
+                            window.prevState = undefined;
+                        } 
+                    } //back to prev place when r pressed
+                }
+			});
+		</script>
+	</body>
+</html>
