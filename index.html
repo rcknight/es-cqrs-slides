@@ -39,11 +39,33 @@
                     <h2>Intro to Event Sourcing &amp; CQRS</h2>
                     <br/>
                     <h3>Rich Knight</h3>
+                    <aside class="notes">
+                        <ul>
+                            <li>Hi</li>
+                            <li>Dev@Cognisant</li>
+                            <li>Pharmaceutical Industry</li>
+                            <li>CQRS+ES 4/5 years</li>
+                            <li>Show of hands heard of / implemented</li>
+                        </ul>
+                    </aside>
                 </section>
 
                 <section>
-                    <section><h2>Modelling Data</h2></section>
                     <section>
+                        <h2>Modelling Data</h2>
+                        <aside class="notes">
+                            <p>Going to start by looking at how we model data when building a system.</p>
+                            <p>Imagine we are building a system to manage some kind of order from a customer</p>
+                            <p>Lets look at what a traditional data model might look like</p>
+                        </aside>
+                    </section>
+                    <section>
+                        <aside>
+                            <ul>
+                                <li>Some kind of object model thats loaded by an ORM on top of SQL</li>
+                                <li>Working with it, load current state, change something, overwrite</li>
+                            </ul>
+                        </aside>
                         <h2>Traditional</h2>
                         <br/>
                         <div>
@@ -110,6 +132,15 @@
                         </div>
                     </section>
                     <section>
+                        <aside class="notes">
+                            <ul>
+                                <li>Instead of saving current state -&gt; stream of events</li>
+                                <li>Talk through slide</li>
+                                <li>No updates, just new events</li>
+                                <li>Old idea - used banking/accountancy - ledger - predates computers</li>
+                                <li>Not even new for software (db transaction log)</li>
+                            </ul>
+                        </aside>
                         <h2>Event Sourced</h2>
                         <br/>
                         <div class='events'>
@@ -129,9 +160,22 @@
                 </section>
                 <section>
                     <section>
+                        <aside class="notes">
+                            <h1>But once we have our data stored like this, how do we work with it?</h1>
+                            <p>At some point we are going to want to know the current state of our system</p>
+                            <p>Easy to build current state, by reading all of these past events and building an object model</p>
+                        </aside>
                         <h2>Current State</h2>
                     </section>
                     <section>
+                        <aside class="notes">
+                            <ul>
+                                <li>Once we have built the current state, we can do all the same things as before</li>
+                                <li>Instead of mutate + save -- just produce a single new event</li>
+                                <li>Not sending big globs of data around, just the changes</li>
+                                <li>Inefficient read all events ever to know current state of my order? No - one stream per object</li>
+                            </ul>
+                        </aside>
                         <h2>Object Oriented</h2>
                         <pre>
                             <code style="max-height: 500px;" data-trim >
@@ -159,6 +203,15 @@ class Order {
 </code></pre>
                     </section>
                     <section>
+                        <aside class="notes">
+                            <ul>
+                                <li>For all the trendy functional programmers in the room...</li>
+                                <li>Left fold</li>
+                                <li>Mention lots of real life event sourced domains</li>
+                                <li>Accountancy</li>
+                                <li>Doctors notes</li>
+                            </ul>
+                        </aside>
                         <h2>Functional</h2>
                         <br/>
                         <br/>
@@ -171,12 +224,26 @@ class Order {
                         <br/>
                     </section>
                     <section>
+                        <aside class="notes">
+                            <ul>
+                                <li>What happes when I want to view all orders placed between 2 dates</li>
+                                <li>My system has millions of orders -&gt; millions of streams -&gt;</li>
+                                <li>Not practical to read every event ever to service this query</li>
+                                <li>This is where CQRS helps us</li>
+                        </aside>
                         <h2>Problem</h2>
                         <p>Show me all orders placed in the last week</p>
                     </section>
                 </section>
                 <section>
                     <section>
+                        <aside class="notes">
+                            <ul>
+                                <li>First going to look at related concept, CQS.</li>
+                                <li>About avoiding side effects</li>
+                                <li>Void + mutate, or return something, not both</li>
+                            </ul>
+                        </aside>
                         <h2>Command Query Separation (CQS)</h2>
                         <br/>
                         <p>Return something OR mutate state. Never both.</p>
@@ -197,6 +264,17 @@ int GetNumberOfLines() {
                     </section>
 
                     <section>
+                        <aside class="notes">
+                            <ul>
+                                <li>CQRS takes this concept a step further</li>
+                                <li>Boil down system to 2 jobs, read + updates (commands and queries)</li>
+                                <li>Greg suggests that the data model needed to process a command is often different to the one for queries</li>
+                                <li>This solves our problem!</li>
+                                <li>We dont want to query our events, we can use them to build a model that is appropriate for querying</li>
+                                <li>If the models are different, why is the code in the same place?</li>
+                                <li>So how does this look?</li>
+                            <ul>
+                        </aside>
                         <h1>CQRS</h1>
                         <p>Command Query Responsibility Segregation</p>
                         <br/>
@@ -207,6 +285,28 @@ int GetNumberOfLines() {
                         </ul>
                     </section>
                     <section>
+                        <aside class="notes">
+                            <h3>Command side</h3>
+                            <ul>
+                                <li>Like what we have already described</li>
+                                <li>Command = request to do something, often an object (people like to queue)</li>
+                                <li>In order to process:</li>
+                                <li>Load events and build just data model we need to apply business logic</li>
+                                <li>Maybe emit new events</li>
+                                <li>Think about tenses</li>
+                            </ul>
+                            <h3>Query side</h3>
+                            <ul>
+                                <li>Only contact with the other side is via events (subscriptions)</li>
+                                <li>Denormalizers - process that consumes a subset of events, produces views.</li>
+                                <li>What views? Anything - any db!</li>
+                                <li>PDF denormalizer CofC</li>
+                                <li>When you ask most people what a DB is for, they will say storing data...</li>
+                                <li>No use if we can't query data in a useful format - queries are the most important function of a DB</li>
+                                <li>So super important that we choose the right tool for the job</li>
+                            </ul>
+                        </aside>
+
                         <img alt='Diagram of an ES/CQRS application' class='stretch' src='img/diagram.png'/>
                     </section>
                 </section>
@@ -289,6 +389,7 @@ Given(
 					{ src: 'plugin/notes/notes.js', async: true },
 					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
 				],
+                showNotes: false,
                 keyboard: {
                     84: function() { 
                         if(!window.prevState)
