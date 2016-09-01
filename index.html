@@ -60,7 +60,7 @@
                         </aside>
                     </section>
                     <section>
-                        <aside>
+                        <aside class="notes">
                             <ul>
                                 <li>Some kind of object model thats loaded by an ORM on top of SQL</li>
                                 <li>Working with it, load current state, change something, overwrite</li>
@@ -230,6 +230,7 @@ class Order {
                                 <li>My system has millions of orders -&gt; millions of streams -&gt;</li>
                                 <li>Not practical to read every event ever to service this query</li>
                                 <li>This is where CQRS helps us</li>
+                            </ul>
                         </aside>
                         <h2>Problem</h2>
                         <p>Show me all orders placed in the last week</p>
@@ -273,7 +274,7 @@ int GetNumberOfLines() {
                                 <li>We dont want to query our events, we can use them to build a model that is appropriate for querying</li>
                                 <li>If the models are different, why is the code in the same place?</li>
                                 <li>So how does this look?</li>
-                            <ul>
+                            </ul>
                         </aside>
                         <h1>CQRS</h1>
                         <p>Command Query Responsibility Segregation</p>
@@ -299,6 +300,7 @@ int GetNumberOfLines() {
                             <ul>
                                 <li>Only contact with the other side is via events (subscriptions)</li>
                                 <li>Denormalizers - process that consumes a subset of events, produces views.</li>
+                                <li>Eventual consistency</li>
                                 <li>What views? Anything - any db!</li>
                                 <li>PDF denormalizer CofC</li>
                                 <li>When you ask most people what a DB is for, they will say storing data...</li>
@@ -312,13 +314,41 @@ int GetNumberOfLines() {
                 </section>
                 <section>
                     <section>
+                        <aside class="notes">
+                            <ul>
+                                <li>Performant writes, sequential appending to a file</li>
+                                <li>Infinite caching</li>
+                            </ul>
+                            <ul>
+                                <li>Handle failures, data just gets more stale, commands just sit in a queue</li>
+                                <li>View side is disposable, rebuild if fails</li>
+                            </ul>
+                            <ul>
+                                <li>No cache expiration, scale reading events by just creating a copy</li>
+                            </ul>
+                            <ul>
+                                <li>Scaling - most systems many more reads than writes, scale out the read side = spin up a new denormalizer</li>
+                            </ul>
+                            <ul>
+                                <li>Time travel! User reports bug, traditional system add logging and maybe catch it next time</li>
+                                <li>With event sourcing, copy prod db, bring up system as if yesterday, run command - especially if you store commands</li>
+                            </ul>
+                            <ul>
+                                <li>If you are storing commands - Smoke Testing</li>
+                                <li>Unit tests of domain are nice - no infrastructure crap, just commands and events.</li>
+                            </ul>
+                            <ul>
+                                <li>Accidental complexity - this is more code, but simpler</li>
+                            </ul>
+                        </aside>
                         <h2>Technical Advantages</h2>
                         <br/>
                         <ul>
+                            <li>Time travel</li>
                             <li>Performance</li>
                             <li>Scaling</li>
+                            <li>Resilience</li>
                             <li>Backups</li>
-                            <li>Time travel</li>
                             <li>Testability</li>
                             <li>Reduces accidental complexity</li>
                         </ul>
@@ -349,15 +379,25 @@ Given(
                    </section>
                 </section>
                 <section>
-                    <section>
-                        <h2>Business Advantages</h2>
-                        <br/>
+                    <aside class="notes">
                         <ul>
-                            <li>Talking the same language</li>
-                            <li>Flexibility</li>
-                            <li>Auditing</li>
+                            <li>If there are no business advantages you probably shouldnt bother</li>
+                            <li>Apply these techniques to systems your business extracts most value from. Not a simple CRUD app</li>
+                            <li>That might mean just part of a single system</li>
+                            <li>DDD ubiquitous language</li>
+                            <li>New features - Event sourcing isnt lossy</li>
+                            <li>Users will ask for things in the future that you couldn't imagine today</li>
+                            <li>Throwing away data is irresponsible</li>
+                            <li>Audit trail</li>
                         </ul>
-                    </section>
+                    </aside>
+                    <h2>Business Advantages</h2>
+                    <br/>
+                    <ul>
+                        <li>Talking the same language</li>
+                        <li>Flexibility</li>
+                        <li>Auditing</li>
+                    </ul>
                 </section>
                 <section>
                     <h2>Resources</h2>
